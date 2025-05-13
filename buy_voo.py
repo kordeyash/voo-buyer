@@ -66,7 +66,6 @@ if __name__ == "__main__":
     print(f"📈 Yesterday's Close: ${yesterday_close:.2f}")
     print(f"💰 Current Price: ${current_price:.2f}")
     print(f"📉 Percent Change: {percent_change:.2f}%")
-    percent_change = -0.08
 
     if percent_change < 0:
         amount_to_buy_percent = abs(percent_change) * 10
