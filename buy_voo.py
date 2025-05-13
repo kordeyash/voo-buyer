@@ -3,6 +3,7 @@ import requests
 from datetime import datetime
 import pytz
 import yfinance as yf
+from bs4 import BeautifulSoup  # Added for scraping
 
 # === ENV VARS ===
 ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
@@ -54,6 +55,31 @@ def place_order(symbol="VOO", qty=1, side="buy", type="market", time_in_force="d
     else:
         print("❌ Order failed:", response.status_code, response.text)
 
+def get_fear_and_greed_index():
+    """
+    Scrape CNN's Fear & Greed Index from the public webpage.
+    """
+    try:
+        url = "https://edition.cnn.com/markets/fear-and-greed"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.get(url, headers=headers)
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        # Look for the needle chart value
+        score_element = soup.find("div", {"id": "needleChart"})
+
+        if score_element:
+            score_text = score_element.text.strip()
+            print(f"🧠 Fear & Greed Index: {score_text}")
+            return score_text
+        else:
+            print("⚠️ Could not find the Fear & Greed index on the page.")
+            return None
+
+    except Exception as e:
+        print(f"❌ Failed to scrape Fear & Greed Index: {e}")
+        return None
+
 if __name__ == "__main__":
     if not is_market_open_today():
         print("📅 Market is closed today. Exiting.")
@@ -66,6 +92,9 @@ if __name__ == "__main__":
     print(f"📈 Yesterday's Close: ${yesterday_close:.2f}")
     print(f"💰 Current Price: ${current_price:.2f}")
     print(f"📉 Percent Change: {percent_change:.2f}%")
+
+    # Uncomment below line if you want to fetch the index:
+    get_fear_and_greed_index()
 
     if percent_change < 0:
         amount_to_buy_percent = abs(percent_change) * 10
