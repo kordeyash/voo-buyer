@@ -3,7 +3,7 @@ import requests
 from datetime import datetime
 import pytz
 import yfinance as yf
-from bs4 import BeautifulSoup  # Added for scraping
+from bs4 import BeautifulSoup  # For scraping
 
 # === ENV VARS ===
 ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
@@ -57,33 +57,36 @@ def place_order(symbol="VOO", qty=1, side="buy", type="market", time_in_force="d
 
 def get_fear_and_greed_index():
     """
-    Scrape CNN's Fear & Greed Index from the public webpage.
+    Scrapes the current Fear & Greed Index from CNN.
     """
     try:
-        url = "https://edition.cnn.com/markets/fear-and-greed"
+        url = "https://money.cnn.com/data/fear-and-greed/"
         headers = {"User-Agent": "Mozilla/5.0"}
         response = requests.get(url, headers=headers)
-        soup = BeautifulSoup(response.text, 'html.parser')
-
-        # Look for the needle chart value
-        score_element = soup.find("div", {"id": "needleChart"})
-
-        if score_element:
-            score_text = score_element.text.strip()
-            print(f"🧠 Fear & Greed Index: {score_text}")
-            return score_text
-        else:
-            print("⚠️ Could not find the Fear & Greed index on the page.")
+        if response.status_code != 200:
+            print(f"❌ Failed to fetch page: Status {response.status_code}")
             return None
 
+        soup = BeautifulSoup(response.text, 'html.parser')
+        score_span = soup.find("span", class_="market-fng-gauge__dial-number-value")
+        if score_span:
+            score = score_span.text.strip()
+            print(f"🧠 CNN Fear & Greed Index: {score}")
+            return score
+        else:
+            print("⚠️ Could not locate the Fear & Greed value.")
+            return None
     except Exception as e:
-        print(f"❌ Failed to scrape Fear & Greed Index: {e}")
+        print(f"❌ Exception while scraping Fear & Greed Index: {e}")
         return None
 
 if __name__ == "__main__":
     if not is_market_open_today():
         print("📅 Market is closed today. Exiting.")
         exit()
+
+    # Fetch and print the Fear & Greed Index (not used in logic yet)
+    get_fear_and_greed_index()
 
     yesterday_close, current_price, percent_change = get_voo_price_data()
     if yesterday_close is None:
@@ -92,9 +95,6 @@ if __name__ == "__main__":
     print(f"📈 Yesterday's Close: ${yesterday_close:.2f}")
     print(f"💰 Current Price: ${current_price:.2f}")
     print(f"📉 Percent Change: {percent_change:.2f}%")
-
-    # Uncomment below line if you want to fetch the index:
-    get_fear_and_greed_index()
 
     if percent_change < 0:
         amount_to_buy_percent = abs(percent_change) * 10
