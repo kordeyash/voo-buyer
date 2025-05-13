@@ -6,14 +6,13 @@ import yfinance as yf
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+import time
 
 # === ENV VARS ===
 ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
 ALPACA_SECRET_KEY = os.getenv("ALPACA_SECRET_KEY")
 
-BASE_URL = "https://paper-api.alpaca.markets"
+BASE_URL = "https://paper-api.alpaca.markets"  # Use live URL for real trades
 HEADERS = {
     "APCA-API-KEY-ID": ALPACA_API_KEY,
     "APCA-API-SECRET-KEY": ALPACA_SECRET_KEY
@@ -22,6 +21,7 @@ HEADERS = {
 def is_market_open_today():
     nyc = pytz.timezone("America/New_York")
     today = datetime.now(nyc).date().isoformat()
+
     response = requests.get(f"{BASE_URL}/v2/calendar?start={today}&end={today}", headers=HEADERS)
     if response.ok:
         calendar = response.json()
@@ -33,6 +33,7 @@ def is_market_open_today():
 def get_voo_price_data():
     voo = yf.Ticker("VOO")
     data = voo.history(period="2d")
+
     if len(data) < 2:
         print("❌ Not enough data to compare price change.")
         return None, None, None
@@ -59,24 +60,22 @@ def place_order(symbol="VOO", qty=1, side="buy", type="market", time_in_force="d
 
 def get_fear_and_greed_index():
     """
-    Uses Selenium to scrape the current Fear & Greed Index from CNN.
+    Uses headless Selenium to extract the Fear & Greed Index from CNN.
     """
     print("🔍 Launching headless browser...")
-    chrome_path = os.getenv("CHROME_PATH", "/snap/bin/chromium")
+
     options = Options()
-    options.binary_location = chrome_path
-    options.add_argument('--headless')
-    options.add_argument('--no-sandbox')
-    options.add_argument('--disable-dev-shm-usage')
-    
+    options.add_argument("--headless=new")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+
     driver = webdriver.Chrome(options=options)
     driver.get("https://money.cnn.com/data/fear-and-greed/")
 
+    time.sleep(5)  # Can be replaced with WebDriverWait for robustness
+
     try:
-        wait = WebDriverWait(driver, 15)
-        element = wait.until(
-            EC.presence_of_element_located((By.CLASS_NAME, "market-fng-gauge__dial-number-value"))
-        )
+        element = driver.find_element(By.CLASS_NAME, "market-fng-gauge__dial-number-value")
         value = element.text.strip()
         print(f"🧠 CNN Fear & Greed Index: {value}")
         return value
