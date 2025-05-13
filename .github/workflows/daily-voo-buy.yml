@@ -18,14 +18,18 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install system dependencies for Chromium
+      - name: Install Chromium and ChromeDriver
         run: |
           sudo apt update
           sudo apt install -y chromium-browser chromium-chromedriver
-          sudo ln -s /usr/lib/chromium-browser/chromedriver /usr/bin/chromedriver
+          if [ ! -f /usr/bin/chromedriver ]; then
+            sudo ln -s /usr/lib/chromium-browser/chromedriver /usr/bin/chromedriver || true
+          fi
 
-      - name: Set Chrome path environment variable
-        run: echo "CHROME_PATH=/usr/bin/chromium-browser" >> $GITHUB_ENV
+      - name: Set environment variables
+        run: |
+          echo "CHROME_PATH=/snap/bin/chromium" >> $GITHUB_ENV
+          echo "CHROMEDRIVER_PATH=/usr/bin/chromedriver" >> $GITHUB_ENV
 
       - name: Install Python dependencies
         run: pip install -r requirements.txt
@@ -34,4 +38,6 @@ jobs:
         env:
           ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          CHROME_PATH: ${{ env.CHROME_PATH }}
+          CHROMEDRIVER_PATH: ${{ env.CHROMEDRIVER_PATH }}
         run: python buy_voo.py
