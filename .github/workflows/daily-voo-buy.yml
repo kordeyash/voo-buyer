@@ -1,0 +1,27 @@
+name: Buy VOO Daily
+
+on:
+  schedule:
+    - cron: '59 15 * * 1-5'  # 3:59 PM UTC Monday through Friday
+  workflow_dispatch:
+
+jobs:
+  buy_voo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run VOO buyer script
+        env:
+          ALPACA_API_KEY: ${{ secrets.ALPACA_API_KEY }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+        run: python buy_voo.py
