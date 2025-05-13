@@ -62,18 +62,13 @@ def get_fear_and_greed_index():
     Uses Selenium to scrape the current Fear & Greed Index from CNN.
     """
     print("🔍 Launching headless browser...")
-
+    chrome_path = os.getenv("CHROME_PATH", "/snap/bin/chromium")
     options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-    options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--user-agent=Mozilla/5.0")
-
-    chrome_path = os.getenv("CHROME_PATH", "/usr/bin/chromium-browser")
     options.binary_location = chrome_path
-
+    options.add_argument('--headless')
+    options.add_argument('--no-sandbox')
+    options.add_argument('--disable-dev-shm-usage')
+    
     driver = webdriver.Chrome(options=options)
     driver.get("https://money.cnn.com/data/fear-and-greed/")
 
