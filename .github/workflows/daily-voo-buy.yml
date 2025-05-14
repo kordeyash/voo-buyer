@@ -2,7 +2,7 @@ name: Buy VOO Daily
 
 on:
   schedule:
-    - cron: '58 15 * * 1-5'  # 3:59 PM UTC Monday through Friday
+    - cron: '58 19 * * 1-5'  # 3:59 PM UTC Monday through Friday
   workflow_dispatch:
 
 jobs:
