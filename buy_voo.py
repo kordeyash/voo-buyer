@@ -17,7 +17,7 @@ HEADERS = {
     "APCA-API-KEY-ID": ALPACA_API_KEY,
     "APCA-API-SECRET-KEY": ALPACA_SECRET_KEY
 }
-
+# comments
 def is_market_open_today():
     nyc = pytz.timezone("America/New_York")
     today = datetime.now(nyc).date().isoformat()
