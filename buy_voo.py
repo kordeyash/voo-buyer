@@ -4,6 +4,10 @@ from datetime import datetime
 import pytz
 import yfinance as yf
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+
+if os.getenv("GITHUB_ACTIONS") != "true":
+    load_dotenv()
 
 # === ENV VARS ===
 ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
@@ -14,6 +18,8 @@ HEADERS = {
     "APCA-API-KEY-ID": ALPACA_API_KEY,
     "APCA-API-SECRET-KEY": ALPACA_SECRET_KEY
 }
+
+
 
 # === CHECK IF MARKET IS OPEN ===
 def is_market_open_today():
