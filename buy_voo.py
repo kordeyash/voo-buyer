@@ -107,7 +107,7 @@ if __name__ == "__main__":
     if percent_change < 0:
         multiplier = 1 / (fear_greed_index / 100)
         amount_to_buy_percent = abs(percent_change) * multiplier
-        qty_to_buy = amount_to_buy_percent / 100
+        qty_to_buy = amount_to_buy_percent / 10
         print(f"🛒 Placing order for {qty_to_buy:.4f} shares of VOO based on fear/greed multiplier {multiplier:.2f}...")
         place_order(qty=round(qty_to_buy, 4))
     else:
