@@ -3,10 +3,7 @@ import requests
 from datetime import datetime
 import pytz
 import yfinance as yf
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-import time
+from bs4 import BeautifulSoup
 
 # === ENV VARS ===
 ALPACA_API_KEY = os.getenv("ALPACA_API_KEY")
@@ -17,7 +14,8 @@ HEADERS = {
     "APCA-API-KEY-ID": ALPACA_API_KEY,
     "APCA-API-SECRET-KEY": ALPACA_SECRET_KEY
 }
-# comments
+
+# === CHECK IF MARKET IS OPEN ===
 def is_market_open_today():
     nyc = pytz.timezone("America/New_York")
     today = datetime.now(nyc).date().isoformat()
@@ -30,6 +28,7 @@ def is_market_open_today():
         print("❌ Failed to fetch market calendar:", response.status_code, response.text)
         return False
 
+# === GET VOO PRICE DATA ===
 def get_voo_price_data():
     voo = yf.Ticker("VOO")
     data = voo.history(period="2d")
@@ -44,6 +43,7 @@ def get_voo_price_data():
 
     return yesterday_close, current_price, percent_change
 
+# === PLACE ORDER ===
 def place_order(symbol="VOO", qty=1, side="buy", type="market", time_in_force="day"):
     order = {
         "symbol": symbol,
@@ -58,39 +58,43 @@ def place_order(symbol="VOO", qty=1, side="buy", type="market", time_in_force="d
     else:
         print("❌ Order failed:", response.status_code, response.text)
 
-def get_fear_and_greed_index():
-    """
-    Uses headless Selenium to extract the Fear & Greed Index from CNN.
-    """
-    print("🔍 Launching headless browser...")
-
-    options = Options()
-    options.add_argument("--headless=new")
-    options.add_argument("--disable-gpu")
-    options.add_argument("--no-sandbox")
-
-    driver = webdriver.Chrome(options=options)
-    driver.get("https://money.cnn.com/data/fear-and-greed/")
-
-    time.sleep(5)  # Can be replaced with WebDriverWait for robustness
+# === GET FEAR & GREED INDEX (from feargreedmeter.com) ===
+def get_fear_greed_index():
+    url = "https://feargreedmeter.com/"
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
 
     try:
-        element = driver.find_element(By.CLASS_NAME, "market-fng-gauge__dial-number-value")
-        value = element.text.strip()
-        print(f"🧠 CNN Fear & Greed Index: {value}")
-        return value
-    except Exception as e:
-        print("❌ Failed to extract Fear & Greed value:", e)
+        response = requests.get(url, headers=headers)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        print("❌ HTTP request failed:", e)
         return None
-    finally:
-        driver.quit()
 
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    try:
+        value_elem = soup.select_one("div.text-center.text-4xl.font-semibold.mb-1.text-white")
+        if not value_elem:
+            raise ValueError("❌ Could not find index value element.")
+        value = value_elem.text.strip()
+        print(f"📊 Fear & Greed Index: {value}")
+        return float(value)
+    except Exception as e:
+        print("❌ Parsing error:", e)
+        return None
+
+# === MAIN SCRIPT ===
 if __name__ == "__main__":
     if not is_market_open_today():
         print("📅 Market is closed today. Exiting.")
         exit()
 
-    get_fear_and_greed_index()
+    fear_greed_index = get_fear_greed_index()
+    if fear_greed_index is None or fear_greed_index == 0:
+        print("⚠️ Invalid Fear & Greed index value. Exiting.")
+        exit()
 
     yesterday_close, current_price, percent_change = get_voo_price_data()
     if yesterday_close is None:
@@ -101,9 +105,10 @@ if __name__ == "__main__":
     print(f"📉 Percent Change: {percent_change:.2f}%")
 
     if percent_change < 0:
-        amount_to_buy_percent = abs(percent_change) * 10
+        multiplier = 1 / (fear_greed_index / 100)
+        amount_to_buy_percent = abs(percent_change) * multiplier
         qty_to_buy = amount_to_buy_percent / 100
-        print(f"🛒 Placing order for {qty_to_buy:.4f} shares of VOO...")
+        print(f"🛒 Placing order for {qty_to_buy:.4f} shares of VOO based on fear/greed multiplier {multiplier:.2f}...")
         place_order(qty=round(qty_to_buy, 4))
     else:
         print("🚫 No drop in price. No action taken.")
